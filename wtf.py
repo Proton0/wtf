@@ -1,38 +1,9 @@
 """
 
-.WTF Formats
+.WTF Format version 1.1
 Made by Proton0
 
-The most un-optimized archive ever (4743.44% file size increase while testing)
-
-.WTF file structure and how to read
-
-Line 1 : JSON data / Metadata
-    -> filename | String
-    -> author  | String
-    -> version | Integer
-    -> pack_ver| Integer
-    -> hash    | String
-    example: {'filename': 'main.py', 'author': 'Testing', 'version': 1, 'pack_ver': 1, 'hash': 'AAAAAAAAAAAAA'}
-
-The rest is file data
-
-fuck = 1
-fucked = 0
-
-.WTFA Archive
-
-Same format as .WTF files but when converted its a ZIP file
-
-.WTFA (ARCHIVE)
-    -> .ZIP (THE ARCHIVE but no compression ofc)
-        -> .WTF (FILE FORMAT)
-            -> .MP3 (OG FILE)
-        -> .WTF (FILE FORMAT)
-            -> .MOV (OG FILE)
-        -> .WTF (FILE FORMAT)
-            -> .MP4 (OG FILE)
-
+Documentation moved to the README.md file (https://github.com/proton0/wtf)
 """
 
 import shutil
@@ -43,10 +14,10 @@ import logging
 import hashlib
 import random
 
-package_version = 2
+package_version = 2  # do not change unless an edit in how data (or metadata) works
 
 
-# logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG) # use only for debugging
 
 
 def byte_to_binary(byte):
@@ -79,7 +50,7 @@ def convert_to_wtf(
         "author": author,
         "version": version,
         "pack_ver": pack_ver,
-        "hash": hashlib.md5(open(file,'rb').read()).hexdigest()
+        "hash": hashlib.md5(open(file, "rb").read()).hexdigest(),
     }
 
     if os.path.exists(wtf_file):  # check if file exists and stuff
@@ -134,9 +105,7 @@ def convert_wtf_to_file(wtf_file, main_file, ignoreHashInvalid=False):
             raise Exception("Metadata found but no file data")
         else:
             metadata = f"{'filename': '', 'author': '', version: 0, pack_ver: 0}"
-            logging.warning(
-                "No metadata found. The version might be incorrect (a another warning will popup soon)"
-            )
+            logging.warning("No metadata found. Package version will be set to 0")
 
     data = lines[1]  # the actual data
     metadata = json.loads(metadata)  # turn it to JSON
@@ -179,11 +148,13 @@ def convert_wtf_to_file(wtf_file, main_file, ignoreHashInvalid=False):
                 [int(binary_data[i : i + 8], 2) for i in range(0, len(binary_data), 8)]
             )
         )
-    hash = hashlib.md5(open(main_file,'rb').read()).hexdigest()
+    hash = hashlib.md5(open(main_file, "rb").read()).hexdigest()
     if metadata["hash"] != hash:
         if not ignoreHashInvalid:
             logging.warning(f"Hash is invalid! {metadata['hash']} changed to {hash}")
-            raise ValueError("Hash changed. To ignore this then set ignoreHashInvalid to True")
+            raise ValueError(
+                "Hash changed. To ignore this then set ignoreHashInvalid to True"
+            )
     logging.info("converted succesfully")
 
 
@@ -222,13 +193,29 @@ class Metadata:
     def __init__(self, file):
         if not os.path.exists(file):
             raise FileNotFoundError("File does not exist")
-        self.file = file
+        # just incase because sometimes idk
+        k = open(file, "r").readlines()
+        if len(k) > 2 or len(k) == 0:
+            raise self.MetadataException("Data might be corrupted")
+        if k[0].startswith("{"):
+            self.file = file
+        else:
+            raise self.MetadataException("No metadata was found in the file!")
+
+    class MetadataException(Exception):
+        def __init__(self, message=None):
+            if message is None:
+                message = "Unknown error"
+            self.message = message
+            super().__init__(message)
 
     def edit(self, metadata, new_value):
         f = open(self.file, "r")
         data = f.readlines()
         f.close()
         f = open(self.file, "w")
+        if not data[0].startswith("{"):
+            raise self.MetadataException("No metadata was found in the file")
         j = json.loads(data[0])
         j[metadata] = new_value
         j = json.dumps(j)
@@ -239,10 +226,14 @@ class Metadata:
     def get_metadata(self):
         f = open(self.file, "r")
         z = f.readlines()[0]
+        if not z.startswith("{"):
+            raise self.MetadataException("No metadata was found in the file")
         return json.loads(z)
 
     def get_value(self, metadata):
         f = open(self.file, "r")
+        if not f.readlines()[0].startswith("{"):
+            raise self.MetadataException("No metadata was found in the file")
         k = json.loads(f.readlines()[0])
         f.close()
         return k[metadata]

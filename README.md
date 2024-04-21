@@ -3,6 +3,17 @@
 
 The WORST format ever!
 
+## How bad is .WTF?
+
+| File Name        	| Original Size 	| .WTF Size 	| Increase (%) 	|
+|------------------	|---------------	|-----------	|--------------	|
+| Hello World.txt  	| 11 bytes      	| 636 bytes 	| 5763.64      	|
+| 2K Wallpaper     	| 7.3 MB        	| 351 MB    	| 4705.48      	|
+| 1024x1024 JPG    	| 92 KB         	| 4.4 MB    	| 4597.83      	|
+| 4 Minutes MP3    	| 6.7 MB        	| 319 MB    	| 4747.76      	|
+| 4K MC Screenshot 	| 18.8 MB       	| 891 MB    	| 4721.28      	|
+Data is took on WTF 1.1 (Package Version 2)
+
 
 ## .WTF File Structure
 
@@ -11,8 +22,12 @@ The WORST format ever!
  - author (String)
  - version (Integer)
  - pack_ver (Integer)
- - hash (String)
- Example: {'filename': 'main.py', 'author': 'Testing', 'version': 1, 'pack_ver': 1, 'hash': 'AAAAAAAAAAAAA'}
+ - hash (String) (only on package version 2)
+
+#####  Example: 
+``
+{'filename': 'main.py', 'author': 'Testing', 'version': 1, 'pack_ver': 2, 'hash': 'AAAAAAAAAAAAA'}
+``
 
 ### File Data
 
@@ -93,3 +108,6 @@ Finally run main.py
   python3 main.py
 ```
 
+## Why did you make this?
+
+I dont really know why
