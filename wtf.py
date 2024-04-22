@@ -1,12 +1,13 @@
 """
 
-.WTF Format version 1.1
+.WTF Format version 1.4
 Made by Proton0
 
 Documentation moved to the README.md file (https://github.com/proton0/wtf)
 """
 
 import shutil
+import datetime
 import zipfile
 import json
 import os
@@ -14,10 +15,13 @@ import logging
 import hashlib
 import random
 
-package_version = 2  # do not change unless an edit in how data (or metadata) works
+package_version = 3  # do not change unless an edit in how data (or metadata) works
 
+level = logging.DEBUG
 
-# logging.basicConfig(level=logging.DEBUG) # use only for debugging
+logging.basicConfig(
+    level=level, format="[%(asctime)s] [%(funcName)s] [%(levelname)s] %(message)s"
+)
 
 
 def byte_to_binary(byte):
@@ -32,6 +36,9 @@ def convert_to_wtf(
     version=1,
     pack_ver=package_version,
     noExtenstion=False,
+    description="",
+    license="",
+    created_unix = None
 ):
     # Convert file data and stuff
     if filename is None:
@@ -43,6 +50,8 @@ def convert_to_wtf(
             wtf_file = wtf_file + ".wtf"
     if author is None:
         author = ""
+    if created_unix is None:
+        created_unix = int(datetime.datetime.now().timestamp())
     logging.debug("create file metadata")
 
     file_data = {  # Make JSON
@@ -51,6 +60,9 @@ def convert_to_wtf(
         "version": version,
         "pack_ver": pack_ver,
         "hash": hashlib.md5(open(file, "rb").read()).hexdigest(),
+        "description": description,
+        "license": license,
+        "created_unix": created_unix
     }
 
     if os.path.exists(wtf_file):  # check if file exists and stuff
@@ -128,7 +140,10 @@ def convert_wtf_to_file(wtf_file, main_file, ignoreHashInvalid=False):
             )
 
             # Make old files and archives skip the hash check because most likely they dont have the hash in the metadata
-            ignoreHashInvalid = True
+            if metadata["pack_ver"] > 2 or metadata["pack_ver"] == 2:
+                logging.info("Not ignoring hash because according the package version it supports it")
+            else:
+                ignoreHashInvalid = True
 
     # Convert the file
     binary_data = ""
@@ -165,42 +180,78 @@ def archive_files(archive_target, archive_file):
     os.mkdir(str(k))
     for files in os.listdir(archive_target):
         file = f"{k}/{files}"
+        logging.info(f"archive {file}")
         convert_to_wtf(f"{archive_target}/{files}", file)
     logging.info("converted all files in target")
+    logging.info("creating the zip")
     shutil.make_archive(archive_file, "zip", k)
+    logging.info("deleting the old folder")
     shutil.rmtree(k)  # remove temp
     fe = archive_file
+    logging.info("converting zip to wtf")
     convert_to_wtf(f"{archive_file}.zip", f"{fe}", noExtenstion=True)
+    logging.info("deleting old .zip file")
     os.remove(f"{archive_file}.zip")
+    logging.info("archive success")
 
 
 def unarchive_files(archive_file, unarchive):
     if not os.path.exists(unarchive):
+        logging.warning("Destination folder does not exist. Creating it now")
         os.mkdir(unarchive)
+    logging.info("convert wtf to zip")
     convert_wtf_to_file(archive_file, "temp.zip")
     with zipfile.ZipFile("temp.zip", "r") as zip_ref:
         zip_ref.extractall("temp-data")
+    logging.info("Extracted data from zip")
     for file in os.listdir("temp-data"):
         jf = file
+        logging.debug("processing file: {}".format(jf))
         if file.endswith(".wtf"):
+            logging.info(f"file {jf} ends with .wtf cutting it")
             jf = jf.split(".wtf")[0]
         convert_wtf_to_file(f"temp-data/{file}", f"{unarchive}/{jf}")
+    logging.info("deleting old data")
     shutil.rmtree("temp-data")
     os.remove(f"temp.zip")
+    logging.info("unarchived successfully")
 
 
 class Metadata:
+    disableChecking = False  # Should always be true
+
     def __init__(self, file):
         if not os.path.exists(file):
             raise FileNotFoundError("File does not exist")
         # just incase because sometimes idk
         k = open(file, "r").readlines()
-        if len(k) > 2 or len(k) == 0:
+        if len(k) > 2 or len(k) == 0 or len(k) < 0:
+            logging.warning(f"{file} did not pass checks")
             raise self.MetadataException("Data might be corrupted")
         if k[0].startswith("{"):
+            logging.info(f"{file} has passed the checks")
             self.file = file
         else:
+            logging.warning("No metadata found!")
             raise self.MetadataException("No metadata was found in the file!")
+
+    def CheckFile(self, file=None):
+        if file is None:
+            file = self.file
+        if self.disableChecking:
+            return
+        else:
+            file2 = file
+            file = open(file, "r")
+            file.seek(0)
+            k = file.readlines()
+            if len(k) > 2 or len(k) == 0 or len(k) < 0:
+                raise self.MetadataException("Data might be corrupted")
+            if not k[0].startswith("{"):
+                raise self.MetadataException("No metadata was found in the file")
+            file.seek(0)
+            logging.info(f"{file2} has passed the check`")
+            return True
 
     class MetadataException(Exception):
         def __init__(self, message=None):
@@ -214,8 +265,9 @@ class Metadata:
         data = f.readlines()
         f.close()
         f = open(self.file, "w")
-        if not data[0].startswith("{"):
-            raise self.MetadataException("No metadata was found in the file")
+        f.seek(0)
+        self.CheckFile()
+        f.seek(0)
         j = json.loads(data[0])
         j[metadata] = new_value
         j = json.dumps(j)
@@ -226,14 +278,16 @@ class Metadata:
     def get_metadata(self):
         f = open(self.file, "r")
         z = f.readlines()[0]
-        if not z.startswith("{"):
-            raise self.MetadataException("No metadata was found in the file")
+        f.seek(0)
+        self.CheckFile()
+        f.seek(0)
         return json.loads(z)
 
     def get_value(self, metadata):
         f = open(self.file, "r")
-        if not f.readlines()[0].startswith("{"):
-            raise self.MetadataException("No metadata was found in the file")
+        f.seek(0)
+        self.CheckFile()
+        f.seek(0)
         k = json.loads(f.readlines()[0])
         f.close()
         return k[metadata]

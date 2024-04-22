@@ -23,6 +23,9 @@ Data is took on WTF 1.1 (Package Version 2)
  - version (Integer)
  - pack_ver (Integer)
  - hash (String) (only on package version 2)
+ - description (String) (only on package version 3)
+ - license (String) (only on package version 3)
+ - created_unix (Integer) (only on package version 3)
 
 #####  Example: 
 ``
@@ -98,9 +101,9 @@ wtf.unarchive_files("archive.wtfa", "extracted")
 Create the following folders like this below
 
 - tests
-   - testdata
-   - ziptest
-then put your files in testdata or ziptest
+   - testdata (Put files you want to converted to .wtf)
+   - ziptest (Put files you want to be archived)
+   - corrupted_data (Corrupted .WTF or .WTFA files here)
 
 Finally run main.py
 

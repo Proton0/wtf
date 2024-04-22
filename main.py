@@ -1,3 +1,5 @@
+import random
+
 import wtf
 import os
 import shutil
@@ -42,6 +44,7 @@ print("Testing metadata function")
 k = os.listdir("tests/converted_wtf")
 
 for z in k:
+    print(f"testing {z}")
     print("creating metadata object")
     meta = wtf.Metadata(f"tests/converted_wtf/{z}")
     print("get_metadata")
@@ -51,4 +54,28 @@ for z in k:
     print("set version")
     meta.edit("version", 3)
     print(meta.get_value("version"))
+
+print("Testing out corrupted data")
+
+k = os.listdir("tests/corrupted_data")
+
+for z in k:
+    print(f"testing {z}")
+    try:
+        k = wtf.Metadata(f"tests/corrupted_data/{z}")
+        print("Printing out the metadata")
+        print(k.get_metadata())
+        print("Printing out version (metadata)")
+        print(k.get_value("version"))
+        print("Printing out package version")
+        print(k.get_value("package_version"))
+        print("Setting version to random number")
+        k.edit("version", random.randint(1,999999))
+        print("Printing out new version")
+        print(k.get_value("version"))
+    except wtf.Metadata.MetadataException as e:
+        print(f"MetadataException : {e}")
+    except Exception as e:
+        print(f"Exception : {e}")
+
 print("All tests complete")
