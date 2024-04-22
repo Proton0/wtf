@@ -1,3 +1,9 @@
+## .WTF has been archived and will no longer be updated!
+
+Why?
+
+This "format" is just a joke and i dont really want to mantain it and plus its almost complete
+
 
 # .WTF Format
 
